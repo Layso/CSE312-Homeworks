@@ -31,3 +31,6 @@
 *.out
 *.app
 exe
+
+# Visual Studio files/folders
+**/.vscode
