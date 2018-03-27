@@ -1,33 +1,38 @@
 #include <iostream>
+#include <ctime>
 #include "8080emuCPP.h"
 #include "gtuos.h"
-
+#include "memory.h"
+#include <string>
 
 
 /* Constant value(s) */
 const int BYTE_BIT_COUNT = 8;
 
 uint64_t GTUOS::handleCall(const CPU8080 & cpu){
-	int op = 7;
+	int cycleCount;
 	std::cout << "SysCall recieved: " << (int)cpu.state->a << std::endl;
 	
-	
-	
-	switch(op) {
-		case GTUOS::PRINT_B :	OperationPrintB(cpu); break;
-		case GTUOS::PRINT_MEM :	OperationPrintMem(cpu); break;
-		case GTUOS::READ_B :	OperationReadB(cpu); break;
-		case GTUOS::READ_MEM :	OperationReadMem(cpu); break;
-		case GTUOS::PRINT_STR :	OperationPrintStr(cpu); break;
-		case GTUOS::READ_STR :	OperationReadStr(cpu); break;
-		case GTUOS::GET_RND :	OperationGetRnd(cpu); break;
+
+	switch(cpu.state->a) {
+		case GTUOS::PRINT_B :	cycleCount = OperationPrintB(cpu); break;
+		case GTUOS::PRINT_MEM :	cycleCount = OperationPrintMem(cpu); break;
+		case GTUOS::READ_B :	cycleCount = OperationReadB(cpu); break;
+		case GTUOS::READ_MEM :	cycleCount = OperationReadMem(cpu); break;
+		case GTUOS::PRINT_STR :	cycleCount = OperationPrintStr(cpu); break;
+		case GTUOS::READ_STR :	cycleCount = OperationReadStr(cpu); break;
+		case GTUOS::GET_RND :	cycleCount = OperationGetRnd(cpu); break;
 		default: std::cout << "Unimplemented systam call\n"; exit(EXIT_FAILURE);
 	}
+	
+	
+	return cycleCount;
 }
 
 
 
-void GTUOS::OperationPrintB(const CPU8080 &cpu) {
+int GTUOS::OperationPrintB(const CPU8080 &cpu) {
+	const int cycle = 10;
 	int value;
 	
 	
@@ -36,11 +41,15 @@ void GTUOS::OperationPrintB(const CPU8080 &cpu) {
 	
 	/* Printing value to standart output */
 	std::cout << value << std::endl;
+	
+	
+	return cycle;
 }
 
 
 
-void GTUOS::OperationPrintMem(const CPU8080 &cpu) {
+int GTUOS::OperationPrintMem(const CPU8080 &cpu) {
+	const int cycle = 10;
 	uint16_t address;
 	int value;
 	
@@ -52,56 +61,109 @@ void GTUOS::OperationPrintMem(const CPU8080 &cpu) {
 	
 	/* Printing value to standart output */
 	std::cout << value << std::endl;
+	
+	
+	return cycle;
 }
 
 
 
-void GTUOS::OperationReadB(const CPU8080 &cpu) {
-	/* 
-	 * TODO:
-	 * Read an integer from stdin
-	 * Write integer to register B
-	 */
+int GTUOS::OperationReadB(const CPU8080 &cpu) {
+	const int cycle = 10;
+	int value;
+	
+	
+	/* Reading value from standart input */
+	std::cin >> value;
+	
+	/* Writing value to register B */
+	cpu.state->b = (uint8_t)value;
+	
+	
+	return cycle;
 }
 
 
 
-void GTUOS::OperationReadMem(const CPU8080 &cpu) {
-	/*
-	 * TODO:
-	 * Read an integer from stdin
-	 * Write integer to mem[CB]
-	 */
+int GTUOS::OperationReadMem(const CPU8080 &cpu) {
+	const int cycle = 10;
+	uint16_t address;
+	int value;
+	
+	
+	/* Reading value from standart input */
+	std::cin >> value;
+	
+	/* Writing value to memory */
+	address = cpu.state->b;
+	address = (address << BYTE_BIT_COUNT) | cpu.state->c;
+	cpu.memory->at(address) = (uint8_t)value;
+	
+	
+	return cycle;
 }
 
 
 
-void GTUOS::OperationPrintStr(const CPU8080 &cpu) {
-	/*
-	 * TODO:
-	 * Get string from mem[BC]
-	 * Print string to the stdout
-	 */
+int GTUOS::OperationPrintStr(const CPU8080 &cpu) {
+	const int cycle = 100;
+	uint16_t address;
+	
+	
+	/* Calculating memory address */
+	address = cpu.state->b;
+	address = (address << BYTE_BIT_COUNT) | cpu.state->c;
+	
+	/* Printing memory content until a null character found */
+	while(cpu.memory->at(address) != '\0') {
+		std::cout << cpu.memory->at(address++);
+	}
+	
+	/* Ending line */
+	std::cout << std::endl;
+	
+	
+	return cycle;
 }
 
 
 
-void GTUOS::OperationReadStr(const CPU8080 &cpu) {
-	/*
-	 * TODO:
-	 * Get string from stdin
-	 * Write string to the mem[BC]
-	 */
+int GTUOS::OperationReadStr(const CPU8080 &cpu) {
+	const int cycle = 100;
+	std::string input;
+	uint16_t address;
+	
+	
+	/* Calculating memory address */
+	address = cpu.state->b;
+	address = (address << BYTE_BIT_COUNT) | cpu.state->c;
+	
+	/* Reading value from standart input */
+	std::getline(std::cin, input);
+	
+	/* Writing input byte by byte to memory */
+	for (int i=0; i<input.length(); ++i) {
+		cpu.memory->at(address+i) = input[i];
+	}
+	
+	
+	return cycle;
 }
 
 
 
-void GTUOS::OperationGetRnd(const CPU8080 &cpu) {
-	/*
-	 * TODO:
-	 * Produce a random integer
-	 * Place random integer to register B
-	 */	
+int GTUOS::OperationGetRnd(const CPU8080 &cpu) {
+	const int cycle = 5;
+	
+	
+	/* Seeding random with time */
+	srand(time(nullptr));
+	
+	/* Writing random number to register B */
+	cpu.state->b = rand();
+	
+	
+	return cycle;
 }
 
 

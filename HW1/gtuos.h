@@ -22,13 +22,13 @@ class GTUOS{
 				
 	private:
 		/* Functions to operate according to system call */
-		void OperationPrintB(const CPU8080 &cpu);
-		void OperationPrintMem(const CPU8080 &cpu);
-		void OperationReadB(const CPU8080 &cpu);
-		void OperationReadMem(const CPU8080 &cpu);
-		void OperationPrintStr(const CPU8080 &cpu);
-		void OperationReadStr(const CPU8080 &cpu);
-		void OperationGetRnd(const CPU8080 &cpu);
+		int OperationPrintB(const CPU8080 &cpu);
+		int OperationPrintMem(const CPU8080 &cpu);
+		int OperationReadB(const CPU8080 &cpu);
+		int OperationReadMem(const CPU8080 &cpu);
+		int OperationPrintStr(const CPU8080 &cpu);
+		int OperationReadStr(const CPU8080 &cpu);
+		int OperationGetRnd(const CPU8080 &cpu);
 };
 
 #endif

@@ -9,7 +9,7 @@ link:
 	g++ -o exe *.o
 
 run:
-	./exe ./Example\ Assembly/sum.com 1
+	./exe ./Example\ Assembly/printstr.com 1
 
 clean:
 	rm -f *.o exe
