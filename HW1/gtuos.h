@@ -8,6 +8,7 @@
 class GTUOS{
 	public:
 		uint64_t handleCall(const CPU8080 & cpu);
+		void Hexdump(const CPU8080 &cpu);
 		
 		/* Const definitions for opcodes to compare */
 		enum Constants {
@@ -29,6 +30,7 @@ class GTUOS{
 		int OperationPrintStr(const CPU8080 &cpu);
 		int OperationReadStr(const CPU8080 &cpu);
 		int OperationGetRnd(const CPU8080 &cpu);
+
 };
 
 #endif

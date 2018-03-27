@@ -1,9 +1,11 @@
 #include <iostream>
+#include <iomanip>
+#include <string>
+#include <fstream>
 #include <ctime>
 #include "8080emuCPP.h"
 #include "gtuos.h"
 #include "memory.h"
-#include <string>
 
 
 /* Constant value(s) */
@@ -167,3 +169,32 @@ int GTUOS::OperationGetRnd(const CPU8080 &cpu) {
 }
 
 
+
+void GTUOS::Hexdump(const CPU8080 &cpu) {
+	const std::string fileName = "memory.mem";
+	const int lineCellCount = 16;
+	const int memoryCap = 0x10000;
+	uint16_t memoryContent;
+	
+	
+	/* Opening file to write */
+	std::ofstream outputFile;
+	outputFile.open(fileName);
+	
+	/* Writing memory content to file with a nice format */
+	for (int i=0; i<memoryCap; ++i) {
+		memoryContent = cpu.memory->at(i);
+		
+		if (!(i%lineCellCount)) {
+			if (i!=0)
+				outputFile << std::endl;
+			
+			outputFile << "0x" << std::hex << std::setw(5) << std::setfill('0') << i << "\t";
+		}
+		
+		outputFile << "\t" << memoryContent << " ";
+	}
+	
+	/* Closing file */
+	outputFile.close();
+}
