@@ -189,7 +189,7 @@ void GTUOS::Hexdump(const CPU8080 &cpu) {
 			if (i!=0)
 				outputFile << std::endl;
 			
-			outputFile << "0x" << std::hex << std::setw(5) << std::setfill('0') << i << "\t";
+			outputFile << "0x" << std::hex << std::setw(5) << std::setfill('0') << i << ":\t";
 		}
 		
 		outputFile << "\t" << memoryContent << " ";
