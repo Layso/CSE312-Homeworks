@@ -25,7 +25,8 @@ int main (int argc, char**argv)
 	GTUOS	theOS;
 
 	theCPU.ReadFileIntoMemoryAt(argv[1], 0x0000);	
- 
+ 	/* Seeding random with time */
+	srand(time(nullptr));
 	do	
 	{
 		totalCycle += theCPU.Emulate8080p(DEBUG);
@@ -37,8 +38,8 @@ int main (int argc, char**argv)
 			
 	}	while (!theCPU.isHalted());
 	
-	theOS.Hexdump(theCPU);
 	std::cout << "Total number of cycles: " << totalCycle << std::endl;
+	theOS.Hexdump(theCPU);
 	return 0;
 }
 

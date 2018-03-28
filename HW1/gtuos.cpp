@@ -160,8 +160,7 @@ int GTUOS::OperationGetRnd(const CPU8080 &cpu) {
 	const int cycle = 5;
 	
 	
-	/* Seeding random with time */
-	srand(time(nullptr));
+	
 	
 	/* Writing random number to register B */
 	cpu.state->b = rand();
