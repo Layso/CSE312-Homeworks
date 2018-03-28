@@ -13,8 +13,6 @@ const int BYTE_BIT_COUNT = 8;
 
 uint64_t GTUOS::handleCall(const CPU8080 & cpu){
 	int cycleCount;
-	std::cout << "SysCall recieved: " << (int)cpu.state->a << std::endl;
-	
 
 	switch(cpu.state->a) {
 		case GTUOS::PRINT_B :	cycleCount = OperationPrintB(cpu); break;
@@ -134,7 +132,7 @@ int GTUOS::OperationReadStr(const CPU8080 &cpu) {
 	const int cycle = 100;
 	std::string input;
 	uint16_t address;
-	
+	char c;
 	
 	/* Calculating memory address */
 	address = cpu.state->b;
@@ -142,6 +140,7 @@ int GTUOS::OperationReadStr(const CPU8080 &cpu) {
 	
 	/* Reading value from standart input */
 	std::getline(std::cin, input);
+	std::cin >> input;
 	
 	/* Writing input byte by byte to memory */
 	for (int i=0; i<input.length(); ++i) {
