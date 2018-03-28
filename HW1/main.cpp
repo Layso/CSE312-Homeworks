@@ -1,6 +1,4 @@
 #include <iostream>
-#include <fstream>
-#include <string>
 #include "8080emuCPP.h"
 #include "gtuos.h"
 #include "memory.h"
@@ -21,7 +19,6 @@ int main (int argc, char**argv)
 	
 	int totalCycle = 0;
 	int DEBUG = atoi(argv[2]);
-	char line;
 	
 	memory 	mem;
 	CPU8080 theCPU(&mem);
@@ -36,7 +33,7 @@ int main (int argc, char**argv)
 			totalCycle += theOS.handleCall(theCPU);
 			
 		if (DEBUG == 2)
-			std::cin >> line;
+			std::cin.get();
 			
 	}	while (!theCPU.isHalted());
 	
