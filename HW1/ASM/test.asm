@@ -42,7 +42,7 @@ GTU_OS:	PUSH D
 enterInt: dw 'Enter an integer',00AH,00H ; null terminated string
 enterStr: dw 'Enter a string',00AH,00H ; null terminated string
 rand: dw 'Random number is: ',00AH,00H ; null terminated string
-
+newLine: dw '',00AH,00H ; null terminated string
 
 begin:
 	LXI SP,stack 	; always initialize the stack pointer
@@ -58,6 +58,13 @@ begin:
 	
 	; PRINT REG B
 	MVI A, PRINT_B	; print the value read from keyboard
+	call GTU_OS	; system call
+	
+	
+	
+	; PRINT NEW LINE
+	LXI B, newLine	; prepare text to print
+	MVI A, PRINT_STR; print text to screen
 	call GTU_OS	; system call
 	
 	; PRINT enterStr
@@ -76,6 +83,14 @@ begin:
 	; PRINT STRING
 	MVI A, PRINT_STR;print text pointed by mem[BC] to screen
 	call GTU_OS	;system call
+
+
+
+	; PRINT NEW LINE
+	LXI B, newLine	; prepare text to print
+	MVI A, PRINT_STR; print text to screen
+	call GTU_OS	; system call
+	
 	
 	; PRINT enterInt
 	LXI B, enterInt	; prepare text to print
@@ -92,6 +107,13 @@ begin:
 	
 	; PRINT FROM MEMORY
 	MVI A, PRINT_MEM; print integer from mem[BC]
+	call GTU_OS	; system call
+	
+	
+	
+	; PRINT NEW LINE
+	LXI B, newLine	; prepare text to print
+	MVI A, PRINT_STR; print text to screen
 	call GTU_OS	; system call
 	
 	; PRINT rand

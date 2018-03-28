@@ -120,7 +120,7 @@ int GTUOS::OperationPrintStr(const CPU8080 &cpu) {
 	}
 	
 	/* Ending line */
-	std::cout << std::endl;
+	/*std::cout << std::endl;*/
 	
 	
 	return cycle;
@@ -130,20 +130,23 @@ int GTUOS::OperationPrintStr(const CPU8080 &cpu) {
 
 int GTUOS::OperationReadStr(const CPU8080 &cpu) {
 	const int cycle = 100;
+	int i;
 	std::string input;
 	uint16_t address;
 	char c;
+	
 	
 	/* Calculating memory address */
 	address = cpu.state->b;
 	address = (address << BYTE_BIT_COUNT) | cpu.state->c;
 	
-	/* Reading value from standart input */
+	/* Reading value from standart input and appending with both new line and null characters */
+	std::cin.ignore();
 	std::getline(std::cin, input);
-	std::cin >> input;
+	input.append("\n\0");
 	
 	/* Writing input byte by byte to memory */
-	for (int i=0; i<input.length(); ++i) {
+	for (i=0; i<input.length(); ++i) {
 		cpu.memory->at(address+i) = input[i];
 	}
 	
