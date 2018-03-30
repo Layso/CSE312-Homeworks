@@ -9,7 +9,7 @@ link:
 	g++ -o exe *.o
 
 run:
-	./exe ./ASM/PrintNumbers.com 1
+	./exe ./ASM/test.com 2
 
 clean:
 	rm -f *.o exe

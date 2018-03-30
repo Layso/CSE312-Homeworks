@@ -11,7 +11,7 @@
 /* Constant value(s) */
 const int BYTE_BIT_COUNT = 8;
 
-uint64_t GTUOS::handleCall(const CPU8080 & cpu){
+uint64_t GTUOS::handleCall(const CPU8080 & cpu) {
 	int cycleCount;
 
 	switch(cpu.state->a) {
@@ -158,14 +158,10 @@ int GTUOS::OperationReadStr(const CPU8080 &cpu) {
 
 int GTUOS::OperationGetRnd(const CPU8080 &cpu) {
 	const int cycle = 5;
-	
-	
-	
-	
+		
 	/* Writing random number to register B */
-	cpu.state->b = rand();
-	
-	
+	cpu.state->b = (uint8_t)rand();
+		
 	return cycle;
 }
 

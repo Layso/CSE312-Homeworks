@@ -1,6 +1,6 @@
         ; 8080 assembler code
-        .hexfile sort.hex
-        .binfile sort.com
+        .hexfile Sort.hex
+        .binfile Sort.com
         ; try "hex" for downloading in hex format
         .download bin  
         .objcopy gobjcopy
