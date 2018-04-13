@@ -2,6 +2,7 @@
 #define H_MEMORY
 
 #include "memoryBase.h"
+#include <stdlib.h>
 
 // This is just a simple memory with no virtual addresses. 
 // You will write your own memory with base and limit registers.
