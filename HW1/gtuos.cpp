@@ -168,7 +168,11 @@ int GTUOS::OperationGetRnd(const CPU8080 &cpu) {
 
 
 void GTUOS::Hexdump(const CPU8080 &cpu) {
+<<<<<<< HEAD
 	const std::string fileName = "com.mem";
+=======
+	const std::string fileName = "exe.mem";
+>>>>>>> 614a39a375f8ce01cb29fcf02d72599331afbe65
 	const int lineCellCount = 16;
 	const int memoryCap = 0x10000;
 	uint16_t memoryContent;
