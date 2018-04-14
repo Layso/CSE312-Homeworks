@@ -34,3 +34,7 @@ exe
 
 # Visual Studio files/folders
 **/.vscode
+
+# Homework specific excluded files
+*.com
+*.exe
