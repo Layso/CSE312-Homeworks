@@ -22,9 +22,9 @@ int main (int argc, char**argv)
 	
 	memory 	mem;
 	CPU8080 theCPU(&mem);
-	GTUOS	theOS;
-
 	theCPU.ReadFileIntoMemoryAt(argv[1], 0x0000);	
+	GTUOS	theOS(theCPU, DEBUG);
+
  	/* Seeding random with time */
 	srand(time(nullptr));
 	do	
@@ -33,9 +33,11 @@ int main (int argc, char**argv)
 		if(theCPU.isSystemCall())
 			totalCycle += theOS.handleCall(theCPU);
 			
-		if (DEBUG == 2)
+		if (totalCycle > 16000)
 			std::cin.get();
 			
+		theOS.EndOfCycleCheck(theCPU, totalCycle);
+		
 	}	while (!theCPU.isHalted());
 		theOS.Hexdump(theCPU);
 	
