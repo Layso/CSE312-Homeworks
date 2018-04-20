@@ -26,7 +26,7 @@ int main (int argc, char**argv)
 	GTUOS	theOS(theCPU, DEBUG);
 
  	/* Seeding random with time */
-	srand(time(nullptr));
+	srand(time(NULL));
 	do	
 	{
 		theOS.CheckStackInstruction(theCPU);
