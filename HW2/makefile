@@ -4,7 +4,7 @@ leysö: clean allcpp
 
 execName = sim8080
 
-args = temp.com 2
+args = prog5.com 3
 
 extraFilesToClear = exe.mem
 

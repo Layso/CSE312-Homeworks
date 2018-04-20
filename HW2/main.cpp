@@ -29,17 +29,20 @@ int main (int argc, char**argv)
 	srand(time(nullptr));
 	do	
 	{
-		totalCycle += theCPU.Emulate8080p(DEBUG);
-		if(theCPU.isSystemCall())
-			totalCycle += theOS.handleCall(theCPU);
-			
-		if (totalCycle > 16000)
-			std::cin.get();
-			
-		theOS.EndOfCycleCheck(theCPU, totalCycle);
+		theOS.CheckStackInstruction(theCPU);
 		
+		if (!theOS.StackOverFlow(theCPU)) {
+			totalCycle += theCPU.Emulate8080p(DEBUG);
+			if(theCPU.isSystemCall())
+				totalCycle += theOS.handleCall(theCPU);
+		}
+		
+		//std::cin.get();
+		
+		theOS.EndOfCycleCheck(theCPU, totalCycle);
 	}	while (!theCPU.isHalted());
-		theOS.Hexdump(theCPU);
+	
+	theOS.Hexdump(theCPU);
 	
 	std::cout << "Total number of cycles: " << totalCycle << std::endl;
 	return 0;

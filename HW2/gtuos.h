@@ -11,9 +11,9 @@ const int ZERO = 0;
 const int NONE = -1;
 const int QUANTUM = 100;
 const int BYTE_BIT_COUNT = 8;
-const int FIRST_THREAD_ID = 2;
-const int MEM_START = 0x0f000;
-const int MEM_INTERVAL = 0x0800;
+const int STACK_START = 0x0ffff;
+const int STACK_SIZE = 0x00800;
+const int STACK_LIMIT = 0x01000;
 
 
 
@@ -42,8 +42,8 @@ class GTUOS {
 		void EndOfCycleCheck(CPU8080 &cpu, int currentCycle);
 		uint64_t handleCall(const CPU8080 &cpu);
 		void Hexdump(const CPU8080 &cpu);
-		
-		
+		void CheckStackInstruction(const CPU8080 &cpu);
+		bool StackOverFlow(const CPU8080 &cpu);
 		
 		/* Inner class for thread accountings */
 		class Thread {
@@ -53,24 +53,32 @@ class GTUOS {
 					RUNNING = 1,
 					READY = 2,
 					BLOCKED = 3,
-					TERMINATED = 4
+					TERMINATED = 4,
+					YIELDED = 5
 				};
 				
 				
-				Thread(int _id, int _cycleStart, int _stackStart, const State8080 &_cpuState);
+				Thread(int _id, int _cycleStart, const State8080 &_cpuState);
 				
 				int GetID();
 				void GiveTurn(int cycle);
 				bool TurnEnded(int cycle);
 				bool Terminated();
 				bool Blocked();
+				bool Yielded();
 				void WaitFor(int id, int currentCycle);
 				void Notify(int currentCycle);
 				int GetWaitedID();
+				int HowMuchWaited(int cycle);
 				void SetState(ThreadState newState);
 				State8080 GetRegisters();
 				void SetRegisters(State8080 _cpuState);
 				void AddCycle(int cycles);
+				int GetStartCycle();
+				int GetDrainedCycles();
+				int GetMemoryStart();
+				int GetProgramCounter();
+				int GetUsedStack();
 				int GetStackPosition();
 				ThreadState GetState();
 			private:
@@ -83,6 +91,7 @@ class GTUOS {
 				int blockTotal;
 				int waitingFor;
 				int stackStart;
+				int memoryStart;
 				ThreadState state;
 				State8080 cpuState;
 		};
@@ -93,13 +102,13 @@ class GTUOS {
 		int previousCycle;
 		Thread runningThread;
 		std::vector<Thread> runQueue;
-		std::vector<Thread> allThreads;
+		std::vector<Thread> threadTable;
 		std::vector<Thread> terminatedThreads;
 		
 		
 		
 		/* Helper functions */
-		void SwitchThread();
+		void SwitchThread(const CPU8080 &cpu);
 		bool SearchThread(std::vector<Thread> list, int id);
 		int GetNewStackPosition();
 		

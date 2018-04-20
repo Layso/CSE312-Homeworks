@@ -14,11 +14,13 @@ using std::endl;
 
 
 /* Constructor for GTU OS */
-GTUOS::GTUOS(const CPU8080 &cpu, int DEBUG) : runningThread(FIRST_THREAD_ID, totalTurn, MEM_START, *cpu.state) {
+GTUOS::GTUOS(const CPU8080 &cpu, int DEBUG) : runningThread(-1, -1, *cpu.state) {
 	previousCycle = ZERO;
 	totalTurn = ZERO;
 	debugMode = DEBUG;
-	allThreads.push_back(runningThread);
+	cpu.state->sp = STACK_START;
+	runningThread = Thread(threadTable.size()+1, previousCycle, *cpu.state);
+	threadTable.push_back(runningThread);
 	runningThread.SetState(Thread::ThreadState::RUNNING);
 }
 
@@ -28,22 +30,23 @@ void GTUOS::EndOfCycleCheck(CPU8080 &cpu, int currentCycle) {
 	int deadlockCounter = ZERO;
 	bool contextSwitch = true;
 	int pastCycles = currentCycle - previousCycle;
+
+
 	runningThread.AddCycle(pastCycles);
+	runningThread.SetRegisters(*cpu.state);	
 	
-	/*cout << endl;
-	cout << "Blocked:  " << runningThread.Blocked() << endl;
-	cout << "Termi:    " << runningThread.Terminated() << endl;
-	cout << "Turn end: ";
-	runningThread.TurnEnded(previousCycle);
-	cout << "Queue:    " << runQueue.size() << endl;*/
 	/* If thread's time is up or terminated, get a new thread to use CPU */
 	if (runQueue.size() > 0 && (runningThread.Blocked() || runningThread.Terminated() || runningThread.TurnEnded(previousCycle))) {
-		runningThread.SetRegisters(*cpu.state);
-		SwitchThread();
+		SwitchThread(cpu);
 		free(cpu.state);
 		cpu.state = new State8080(runningThread.GetRegisters());
 	}
 	
+	/* If runQueue is empty terminate the system */
+	else if (runQueue.size() == 0 && runningThread.Terminated()) {
+		std::cout << "No runnable threads available. Shutting down the system\n";
+		*cpu.lastOpcode = 0x76;
+	}
 	
 	previousCycle = currentCycle;
 }
@@ -51,33 +54,69 @@ void GTUOS::EndOfCycleCheck(CPU8080 &cpu, int currentCycle) {
 
 
 /* Helper function to switch the thread on CPU */
-void GTUOS::SwitchThread() {
+void GTUOS::SwitchThread(const CPU8080 &cpu) {
 	/* Printing switch information according to debug mode */
-	if (debugMode == 2 || debugMode == 0 || debugMode == 1) {
-		std::cout << "Swtiching thread  " << runningThread.GetID() << " because";
+	if (debugMode == 2) {
+		std::cout << "\nControlling thread switch due to";
 	}
 	
 	
 	/* If current thread is terminated insert to terminated list */
 	if (runningThread.Terminated()) {
 		terminatedThreads.push_back(runningThread);
-		std::cout << " terminated\n";
+		
+		if (debugMode == 2)
+			std::cout << " termination\n";
 	}
 	
+	/* If blocked simply push back to the queue */ 
 	else if (runningThread.Blocked()) {
 		runQueue.push_back(runningThread);
-		std::cout << " blocked\n";
+		
+		if (debugMode == 2)
+			std::cout << " blocking call\n";
+	}
+	
+	/* If yielded, change state to ready and push back to queue */
+	else if (runningThread.Yielded()) {
+		runningThread.SetState(Thread::ThreadState::READY);
+		runQueue.push_back(runningThread);
+		
+		if (debugMode == 2)
+			std::cout << " CPU yielding\n";
 	}
 	
 	else {
 		runningThread.SetState(Thread::READY);
 		runQueue.push_back(runningThread);
-		std::cout << " turn ended\n";
+		
+		if (debugMode == 2)
+			std::cout << " end of turn\n";
 	}
 	
-	//cout << "Current thread: " << runningThread.GetID() << "/" << previousCycle << endl;
+	if (debugMode == 2) {
+		for (int i=0; i<runQueue.size(); ++i) {
+			if (runQueue[i].Blocked())
+				std::cout << "Thread " << runQueue[i].GetID() << " is waiting thread " << runQueue[i].GetWaitedID() << " for " << runQueue[i].HowMuchWaited(previousCycle) << " cycles\n";
+		}
+		
+		std::cout << "Previous thread ID: " << runningThread.GetID() << std::endl;
+	}
+	
+	
+	/* Updating thread table for previous thread */
+	for (int i=0; i<threadTable.size(); ++i) {
+		if (threadTable[i].GetID() == runningThread.GetID()) {
+			threadTable.erase(threadTable.begin() + i);
+			threadTable.push_back(runningThread);
+			break;
+		}
+	}
+	
+	
+	/* Find the next thread available */
 	do {
-		runningThread = runQueue.front();
+		runningThread = runQueue.front();			
 		runQueue.erase(runQueue.begin());
 		if (runningThread.Blocked()) {
 			if (SearchThread(terminatedThreads, runningThread.GetWaitedID()))
@@ -85,11 +124,79 @@ void GTUOS::SwitchThread() {
 			else
 				runQueue.push_back(runningThread);
 		}
-		
 	} while (runningThread.GetState() == Thread::ThreadState::BLOCKED);
-	runningThread.GiveTurn(previousCycle);
 	
-	cout << "Currently running: " << runningThread.GetID() << endl;
+	
+	/* If no available threads found to run terminate the system */
+	if (runningThread.GetState() != Thread::ThreadState::READY) {
+		std::cout << "No runnable threads available. Shutting down the system\n";
+		*cpu.lastOpcode = 0x76;
+	}
+	
+	else {
+		runningThread.GiveTurn(previousCycle);
+		
+		/* Updating thread table for next thread */
+		for (int i=0; i<threadTable.size(); ++i) {
+			if (threadTable[i].GetID() == runningThread.GetID()) {
+				threadTable.erase(threadTable.begin() + i);
+				threadTable.push_back(runningThread);
+				break;
+			}
+		}
+		
+		
+	}
+	
+	if (debugMode == 3) {
+		std::string state;
+		std::cout << "\nThread ID  " << "  Start Cycle  " << "  Cycle Drain  " << "  Thread State  " << "  Memory Start  " << "  Program Counter  " << "  Stack Usage\n";
+		for (int i=0; i<threadTable.size(); ++i) {
+			switch (threadTable[i].GetState()) {
+				case Thread::ThreadState::READY: state = "Ready"; break;
+				case Thread::ThreadState::RUNNING: state = "Running"; break;
+				case Thread::ThreadState::BLOCKED: state = "Blocked"; break;
+				case Thread::ThreadState::YIELDED: state = "Yielded"; break;
+				case Thread::ThreadState::TERMINATED: state = "Terminated"; break;
+			}
+			
+			std::cout << std::setw(9) << threadTable[i].GetID();
+			std::cout << std::setw(15) << threadTable[i].GetStartCycle();
+			std::cout << std::setw(15) << threadTable[i].GetDrainedCycles();
+			std::cout << std::setw(16) << state;
+			std::cout << std::setw(16) << threadTable[i].GetMemoryStart();
+			std::cout << std::setw(19) << threadTable[i].GetProgramCounter();
+			std::cout << std::setw(7) << threadTable[i].GetUsedStack() << " byte(s)"; 
+			std::cout << std::endl;
+		}
+		
+		std::cout << std::endl;
+	}
+	
+	if (debugMode == 2)
+		std::cout << "Current thread ID:  " << runningThread.GetID() << std::endl << std::endl;
+}
+
+
+
+/* Function to prevent user change stack position */
+void GTUOS::CheckStackInstruction(const CPU8080 &cpu) {
+	/* If current instruction changes stack pointer get new instruction by changing pc */
+	if (cpu.memory->at(cpu.state->pc) == 0x31)
+		cpu.state->pc += 3;
+}
+
+
+
+/* Contorlling stack overflow to prevent data override */
+bool GTUOS::StackOverFlow(const CPU8080 &cpu) {
+	if (runningThread.GetUsedStack() > STACK_SIZE) {
+		runningThread.SetState(Thread::ThreadState::TERMINATED);
+		std::cout << "\nStackOverFlow exception. Thread " << runningThread.GetID() << " terminated due to stack overflow\n\n";
+		return true;
+	}
+	
+	return false;
 }
 
 
@@ -108,7 +215,7 @@ bool GTUOS::SearchThread(std::vector<Thread> list, int id) {
 
 /* Helper function to find an empty stack location for new thread */
 int GTUOS::GetNewStackPosition() {
-	int newPosition = MEM_START;
+	int newPosition = STACK_START;
 	bool flag;
 	
 	runQueue.push_back(runningThread);
@@ -117,15 +224,18 @@ int GTUOS::GetNewStackPosition() {
 		flag = true;
 		for(int i=0; i<runQueue.size(); ++i) {
 			if (runQueue[i].GetStackPosition() == newPosition) {
-				newPosition -= MEM_INTERVAL;
+				newPosition -= STACK_SIZE;
 				flag = false;
 			}
 		}
-		
-		
 	} while(!flag);
 	
 	runQueue.pop_back();
+	
+	
+	/* If there is no more memory left return error code */
+	if (newPosition < STACK_LIMIT)
+		return -1;
 	
 	return newPosition;
 }
@@ -142,12 +252,12 @@ int GTUOS::GetNewStackPosition() {
 
 /* THREAD IMPLEMENTATIONS */
 /* Constructor for thread class */
-GTUOS::Thread::Thread(int _id, int _cycleStart, int _stackStart, const State8080 &_cpuState) {
+GTUOS::Thread::Thread(int _id, int _cycleStart, const State8080 &_cpuState) {
 	id = _id;
 	cpuState = _cpuState;
 	cycleStart = _cycleStart;
-	stackStart = _stackStart;
-	cpuState.sp = _stackStart;
+	stackStart = cpuState.sp;
+	memoryStart = _cpuState.pc;
 	
 	turn = ZERO;
 	cycleTotal = ZERO;
@@ -157,10 +267,7 @@ GTUOS::Thread::Thread(int _id, int _cycleStart, int _stackStart, const State8080
 	state = ThreadState::READY;
 }
 
-
-
 bool GTUOS::Thread::TurnEnded(int cycle) {
-	//cout << cycle << "/" << turnStart << endl;
 	return (cycle - turnStart) > QUANTUM;
 }
 
@@ -175,6 +282,10 @@ bool GTUOS::Thread::Terminated() {
 
 bool GTUOS::Thread::Blocked() {
 	return state == BLOCKED;
+}
+
+bool GTUOS::Thread::Yielded() {
+	return state == YIELDED;
 }
 
 int GTUOS::Thread::GetID() {
@@ -196,6 +307,30 @@ void GTUOS::Thread::Notify(int currentCycle) {
 
 int GTUOS::Thread::GetWaitedID() {
 	return waitingFor;
+}
+
+int GTUOS::Thread::GetStartCycle() {
+	return cycleStart;
+}
+
+int GTUOS::Thread::GetDrainedCycles() {
+	return cycleTotal;
+}
+
+int GTUOS::Thread::GetMemoryStart() {
+	return memoryStart;
+}
+
+int GTUOS::Thread::GetProgramCounter() {
+	return cpuState.pc;
+}
+
+int GTUOS::Thread::GetUsedStack() {
+	return stackStart-cpuState.sp;
+}
+
+int GTUOS::Thread::HowMuchWaited(int cycle) {
+	return cycle - blockStart;
 }
 
 void GTUOS::Thread::AddCycle(int cycles) {
@@ -259,23 +394,30 @@ int GTUOS::OperationThreadCreate(const CPU8080 &cpu) {
 	const int cycle = 80;
 	State8080 newState;
 	uint16_t address;
-	
+	int newSP;
 	
 	/* Calculating the address of the given function */
 	memset(&newState, ZERO, sizeof(newState));
 	address = cpu.state->b;
 	address = (address << BYTE_BIT_COUNT) | cpu.state->c;
-	newState.pc = address;
-	
-	
+	newSP = GetNewStackPosition();
+
+
+	if (newSP == -1) {
+		std::cout << "\nOutOfMemory exception. Thread creation failed due to low remaining memory\n\n";
+		cpu.state->b = 0;
+	}
 	
 	/* Creating new thread object with empty state pointing to desired function as pc, thread id stored to register b */
-	Thread newThread(allThreads.size()+2, previousCycle+cycle, GetNewStackPosition(), newState);
-	cpu.state->b = newThread.GetID();
-	allThreads.push_back(newThread);
-	runQueue.push_back(newThread);
+	else {
+		newState.pc = address;
+		newState.sp = newSP;
+		Thread newThread(threadTable.size()+1, previousCycle+cycle, newState);
+		cpu.state->b = newThread.GetID();
+		threadTable.push_back(newThread);
+		runQueue.push_back(newThread);
+	}
 	
-	std::cout << "Thread " << newThread.GetID() << " created\n";
 	
 	return cycle;
 }
@@ -288,11 +430,8 @@ int GTUOS::OperationThreadJoin(const CPU8080 &cpu) {
 	
 	/* Controlling if there is a valid thread to wait to prevent deadlock */
 	if (SearchThread(runQueue, cpu.state->b) || SearchThread(terminatedThreads, cpu.state->b)) {
-		int id = cpu.state->b;
-		std::cout << "Waiting for: " << id << std::endl;
 		runningThread.WaitFor(cpu.state->b, previousCycle + cycle);
 	}
-	
 	
 	return cycle;
 }
@@ -302,10 +441,7 @@ int GTUOS::OperationThreadJoin(const CPU8080 &cpu) {
 int GTUOS::OperationThreadExit(const CPU8080 &cpu) {
 	const int cycle = 50;
 	
-	
-	cout << "Thread " << runningThread.GetID() << " used TExit\n";
 	runningThread.SetState(Thread::ThreadState::TERMINATED);
-	
 	
 	return cycle;
 }
@@ -314,7 +450,9 @@ int GTUOS::OperationThreadExit(const CPU8080 &cpu) {
 
 int GTUOS::OperationThreadYield(const CPU8080 &cpu) {
 	const int cycle = 40;
+	
 	std::cout << "Thread yielding\n";
+	runningThread.SetState(Thread::ThreadState::YIELDED);
 	
 	return cycle;
 }
@@ -407,11 +545,7 @@ int GTUOS::OperationPrintStr(const CPU8080 &cpu) {
 	/* Printing memory content until a null character found */
 	while(cpu.memory->at(address) != '\0') {
 		std::cout << cpu.memory->at(address++);
-	}
-	
-	/* Ending line */
-	/*std::cout << std::endl;*/
-	
+	}	
 	
 	return cycle;
 }

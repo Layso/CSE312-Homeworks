@@ -1,6 +1,6 @@
 ; 8080 assembler code
-.hexfile temp.hex
-.binfile temp.com
+.hexfile prog4.hex
+.binfile prog4.com
 
 ; try "hex" for downloading in hex format
 .download bin  
@@ -47,103 +47,36 @@ GTU_OS:	PUSH D
 
 
 
+; This program creates threads with F4 and F5, waits until they are done to let them run in parallel then ends the program
+
 ; Defining array and array size
 size equ 50
 list: dw 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50 
 
 
 
-
-
-;Start of the program flow
+; Start of the program flow
+; No more stack initialization required since OS handles it now
 begin:
-	LXI SP, stack		; Initializing stack
-
-	LXI b, function1	; Loading function pointer to bc
-	MVI a, TCreate		; Loading thread create system code to a
+	LXI b, function4	; Loading address of F1 to BC registers
+	MVI a, TCreate		; Requesting thread creation with F1
 	CALL GTU_OS		; System call for upper instruction
-	MOV d, b		; Save thread id on d
+	push b			; Push thread ID to stack
+	LXI b, function5	; Loading address of F3 to BC registers
+	CALL GTU_OS		; Requesting another thread creation for F3
 	
-	LXI b, function3	; Loading function pointer to bc
-	MVI a, TCreate		; Loading thread create system code to a
+	MVI a, TJoin		; Requesting a blockage until previous thread is done
 	CALL GTU_OS		; System call for upper instruction
-	
-	MVI a, TJoin		; Loading thread wait system code to a for second thread
-	CALL GTU_OS		; System call for upper instruction
-	
-	MOV b, d		; Load second thread id to b
-	MVI a, TJoin		; Loading thread wait system code to a for first thread
-	CALL GTU_OS		; System call for upper instruction
-
+	pop b			; Get other thread ID to b back
+	CALL GTU_OS		; Request blockage for other thread too
 end:
-	hlt
+	hlt			; Halting the system after all done
 
 
 
 
 
-
-
-
-
-
-; Function that prints numbers [0,50) to the screen
-function1:
-	MVI b, 0		; Specifying start point
-	MVI c, 50		; Specifying end point
-
-fn1_loop:
-	MVI a, PRINT_B		; Prepare to print current number	print(b)
-	CALL GTU_OS		; System call for upper instruction
-	INR b			; Increase current number		++b
-	MOV a, c		; Get end point to accumulator		a = c
-	SUB b			; Subtract b from accumulator		a = a-b
-	JNZ fn1_loop		; if (Z != 0) jump fn1_loop else continue
-	MVI a, TExit		; Exit the thread
-	CALL GTU_OS		; System call for upper instruction
-
-
-
-
-
-; Function that adds numbers [0, 22] and prints the result
-; This actually should add numbers up to 1000 but I couldn't complete it
-function2:
-	MVI c, 22		; Initialize the maximum number
-	MVI a, 0		; Clear the accumulator
-
-fn2_loop:
-	ADD c			; Add accumulator with c		a = a+c
-	DCR c			; Decrease the maximum number		--c
-	JNZ fn2_loop		; if (Z != 0) jump fn2_loop else continue
-	MOV b, a		; Moving the result to b register	b = a
-	MVI a, PRINT_B		; Printing the result
-	CALL GTU_OS		; System call for upper instruction
-	MVI a, TExit		; Exit the thread
-	CALL GTU_OS		; System call for upper instruction
-
-
-
-
-
-; Function that prints numbers [50,100) to the screen
-function3:
-	MVI b, 50		; Specifying start point
-	MVI c, 100		; Specifying end point
-
-fn3_loop:
-	MVI a, PRINT_B		; Prepare to print current number 	print(b)
-	CALL GTU_OS		; System call for upper instruction
-	INR b			; Increase current number 		++b
-	MOV a, c		; Get end point to accumulator		a = c
-	SUB b			; Subtract b from accumulator 		a = a-b
-	JNZ fn3_loop		; if (Z != 0) jump fn3_loop else continue
-	MVI a, TExit		; Exit the thread
-	CALL GTU_OS		; System call for upper instruction
-
-
-
-
+; This function fills array with 50 random bytes, sorts them and then prints them to screen
 function4:
 	MVI d, size
 	LXI h, list
@@ -188,7 +121,8 @@ fn4_print:
 	INX h			;					++i
 	DCR d			; Decrease remaining item count		--sizeTemp
 	JNZ fn4_print		; if (Z != 0) jump fn4_print else continue
-	RET			; return	
+	MVI a, TExit		; Exit the thread
+	CALL GTU_OS		; System call for upper instruction
 
 fn4_swap:
 	MOV m, b		; Put bigger number on current index	arr[i] = b
@@ -204,5 +138,7 @@ fn4_swap:
 
 
 function5:
-	ret
+	MVI a, TExit		; Exit the thread
+	CALL GTU_OS		; System call for upper instruction
+
 
