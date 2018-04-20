@@ -9,10 +9,6 @@
 
 
 
-using std::cout;
-using std::endl;
-
-
 /* Constructor for GTU OS */
 GTUOS::GTUOS(const CPU8080 &cpu, int DEBUG) : runningThread(-1, -1, *cpu.state) {
 	previousCycle = ZERO;
@@ -460,7 +456,6 @@ int GTUOS::OperationThreadExit(const CPU8080 &cpu) {
 int GTUOS::OperationThreadYield(const CPU8080 &cpu) {
 	const int cycle = 40;
 	
-	std::cout << "Thread yielding\n";
 	runningThread.SetState(YIELDED);
 	
 	return cycle;
