@@ -15,6 +15,15 @@ const int STACK_START = 0x0ffff;
 const int STACK_SIZE = 0x00800;
 const int STACK_LIMIT = 0x01000;
 
+/* Const definitions for states to compare */
+enum ThreadState {
+	RUNNING = 1,
+	READY = 2,
+	BLOCKED = 3,
+	TERMINATED = 4,
+	YIELDED = 5
+};
+
 
 
 class GTUOS {
@@ -47,17 +56,7 @@ class GTUOS {
 		
 		/* Inner class for thread accountings */
 		class Thread {
-			public:
-				/* Const definitions for states to compare */
-				enum ThreadState {
-					RUNNING = 1,
-					READY = 2,
-					BLOCKED = 3,
-					TERMINATED = 4,
-					YIELDED = 5
-				};
-				
-				
+			public:				
 				Thread(int _id, int _cycleStart, const State8080 &_cpuState);
 				
 				int GetID();
