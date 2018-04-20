@@ -81,6 +81,8 @@ class GTUOS {
 				int GetUsedStack();
 				int GetStackPosition();
 				ThreadState GetState();
+				int GetExitStatus();
+				void SetExitStatus(int status);
 			private:
 				int id;
 				int turn;
@@ -92,6 +94,7 @@ class GTUOS {
 				int waitingFor;
 				int stackStart;
 				int memoryStart;
+				int exitStatus;
 				ThreadState state;
 				State8080 cpuState;
 		};

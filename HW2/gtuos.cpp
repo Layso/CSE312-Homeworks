@@ -357,6 +357,14 @@ int GTUOS::Thread::GetStackPosition() {
 	return stackStart;
 }
 
+int GTUOS::Thread::GetExitStatus() {
+	return exitStatus;
+}
+
+void GTUOS::Thread::SetExitStatus(int status) {
+	exitStatus = status;
+}
+
 
 
 
@@ -441,6 +449,7 @@ int GTUOS::OperationThreadJoin(const CPU8080 &cpu) {
 int GTUOS::OperationThreadExit(const CPU8080 &cpu) {
 	const int cycle = 50;
 	
+	runningThread.SetExitStatus(cpu.state->b);
 	runningThread.SetState(Thread::ThreadState::TERMINATED);
 	
 	return cycle;
