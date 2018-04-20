@@ -21,7 +21,7 @@ GTUOS::GTUOS(const CPU8080 &cpu, int DEBUG) : runningThread(-1, -1, *cpu.state) 
 	cpu.state->sp = STACK_START;
 	runningThread = Thread(threadTable.size()+1, previousCycle, *cpu.state);
 	threadTable.push_back(runningThread);
-	runningThread.SetState(ThreadState::RUNNING);
+	runningThread.SetState(RUNNING);
 }
 
 
@@ -79,7 +79,7 @@ void GTUOS::SwitchThread(const CPU8080 &cpu) {
 	
 	/* If yielded, change state to ready and push back to queue */
 	else if (runningThread.Yielded()) {
-		runningThread.SetState(ThreadState::READY);
+		runningThread.SetState(READY);
 		runQueue.push_back(runningThread);
 		
 		if (debugMode == 2)
@@ -87,7 +87,7 @@ void GTUOS::SwitchThread(const CPU8080 &cpu) {
 	}
 	
 	else {
-		runningThread.SetState(ThreadState::READY);
+		runningThread.SetState(READY);
 		runQueue.push_back(runningThread);
 		
 		if (debugMode == 2)
@@ -124,11 +124,11 @@ void GTUOS::SwitchThread(const CPU8080 &cpu) {
 			else
 				runQueue.push_back(runningThread);
 		}
-	} while (runningThread.GetState() == ThreadState::BLOCKED);
+	} while (runningThread.GetState() == BLOCKED);
 	
 	
 	/* If no available threads found to run terminate the system */
-	if (runningThread.GetState() != ThreadState::READY) {
+	if (runningThread.GetState() != READY) {
 		std::cout << "No runnable threads available. Shutting down the system\n";
 		*cpu.lastOpcode = 0x76;
 	}
@@ -153,11 +153,11 @@ void GTUOS::SwitchThread(const CPU8080 &cpu) {
 		std::cout << "\nThread ID  " << "  Start Cycle  " << "  Cycle Drain  " << "  Thread State  " << "  Memory Start  " << "  Program Counter  " << "  Stack Usage\n";
 		for (int i=0; i<threadTable.size(); ++i) {
 			switch (threadTable[i].GetState()) {
-				case ThreadState::READY: state = "Ready"; break;
-				case ThreadState::RUNNING: state = "Running"; break;
-				case ThreadState::BLOCKED: state = "Blocked"; break;
-				case ThreadState::YIELDED: state = "Yielded"; break;
-				case ThreadState::TERMINATED: state = "Terminated"; break;
+				case READY: state = "Ready"; break;
+				case RUNNING: state = "Running"; break;
+				case BLOCKED: state = "Blocked"; break;
+				case YIELDED: state = "Yielded"; break;
+				case TERMINATED: state = "Terminated"; break;
 			}
 			
 			std::cout << std::setw(9) << threadTable[i].GetID();
@@ -191,7 +191,7 @@ void GTUOS::CheckStackInstruction(const CPU8080 &cpu) {
 /* Contorlling stack overflow to prevent data override */
 bool GTUOS::StackOverFlow(const CPU8080 &cpu) {
 	if (runningThread.GetUsedStack() > STACK_SIZE) {
-		runningThread.SetState(ThreadState::TERMINATED);
+		runningThread.SetState(TERMINATED);
 		std::cout << "\nStackOverFlow exception. Thread " << runningThread.GetID() << " terminated due to stack overflow\n\n";
 		return true;
 	}
@@ -264,7 +264,7 @@ GTUOS::Thread::Thread(int _id, int _cycleStart, const State8080 &_cpuState) {
 	waitingFor = NONE;
 	blockStart = NONE;
 	blockTotal = ZERO;
-	state = ThreadState::READY;
+	state = READY;
 }
 
 bool GTUOS::Thread::TurnEnded(int cycle) {
@@ -450,7 +450,7 @@ int GTUOS::OperationThreadExit(const CPU8080 &cpu) {
 	const int cycle = 50;
 	
 	runningThread.SetExitStatus(cpu.state->b);
-	runningThread.SetState(ThreadState::TERMINATED);
+	runningThread.SetState(TERMINATED);
 	
 	return cycle;
 }
@@ -461,7 +461,7 @@ int GTUOS::OperationThreadYield(const CPU8080 &cpu) {
 	const int cycle = 40;
 	
 	std::cout << "Thread yielding\n";
-	runningThread.SetState(ThreadState::YIELDED);
+	runningThread.SetState(YIELDED);
 	
 	return cycle;
 }
