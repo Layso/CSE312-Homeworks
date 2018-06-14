@@ -3,6 +3,7 @@
 #include <string>
 #include <fstream>
 #include <ctime>
+#include <string.h>
 #include "8080emuCPP.h"
 #include "gtuos.h"
 #include "memory.h"
@@ -19,17 +20,16 @@
 
 
 /* Constructor for GTU OS */
-GTUOS::GTUOS(const CPU8080 &cpu, int DEBUG, const FileSystem &newSystem) : runningThread(-1, -1, *cpu.state) {
+GTUOS::GTUOS(const CPU8080 &cpu, int DEBUG, char *fileName) : runningThread(-1, -1, *cpu.state) {
 	previousCycle = ZERO;
 	totalTurn = ZERO;
 	debugMode = DEBUG;
-	fileSystem = newSystem;
+	fileSystem.ReadSystemFile(fileName);
 	cpu.state->sp = STACK_START;
 	runningThread = Thread(threadTable.size()+1, previousCycle, *cpu.state);
 	threadTable.push_back(runningThread);
 	runningThread.SetState(RUNNING);
 }
-
 
 
 void GTUOS::EndOfCycleCheck(CPU8080 &cpu, int currentCycle) {
@@ -427,7 +427,7 @@ int GTUOS::OperationFileCreate(const CPU8080 &cpu) {
 	}	
 	
 	status = fileSystem.CreateFile(name);
-	cpu.state->b = (status == ERROR_CODE) ? ZERO : 1;
+	cpu.state->b = (status == ERROR_CODE) ? ZERO : status;
 	
 	return cycle;
 }
@@ -456,7 +456,7 @@ int GTUOS::OperationFileOpen(const CPU8080 &cpu) {
 	}
 	
 	
-	if (found) {
+	if (found || status == ERROR_CODE) {
 		cpu.state->b = ZERO;
 	}
 	
@@ -473,7 +473,35 @@ int GTUOS::OperationFileOpen(const CPU8080 &cpu) {
 
 int GTUOS::OperationFileRead(const CPU8080 &cpu) {
 	const int cycle = 50;
-	std::cout << "File read\n";
+	bool found = false;
+	std::vector<char> data;
+	uint16_t address;
+	int index = ZERO;
+	bool status;
+	
+	
+	address = cpu.state->b;
+	address = (address << BYTE_BIT_COUNT) | cpu.state->c;
+	for (int i=0; i<openFiles.size(); ++i) {
+		if (openFiles[i] == cpu.state->e) {
+			found = true;
+		}
+	}
+	
+	
+	cpu.state->b = ZERO;
+	if (found) {
+		data = fileSystem.ReadFile(cpu.state->e, cpu.state->d, &status);
+		
+		if (status) {
+			for (int i=0; i<cpu.state->d; ++i) {
+				cpu.memory->at(address + index) = data[i];
+			}
+			
+			cpu.state->b = cpu.state->d;
+		}
+	}
+	
 	
 	return cycle;
 }
@@ -497,8 +525,7 @@ int GTUOS::OperationFileWrite(const CPU8080 &cpu) {
 			found = true;
 		}
 	}
-	
-	
+	cpu.state->b = ZERO;
 	if (found) {
 		data.clear();
 		while(index < cpu.state->d) {
@@ -508,11 +535,7 @@ int GTUOS::OperationFileWrite(const CPU8080 &cpu) {
 		}
 		
 		status = fileSystem.WriteFile(cpu.state->e, data);
-		cpu.state->b = (status == ERROR_CODE) ? ZERO : status;
-	}
-	
-	else {
-		cpu.state->b = ZERO;
+		cpu.state->b = status;
 	}
 	
 	
@@ -523,7 +546,24 @@ int GTUOS::OperationFileWrite(const CPU8080 &cpu) {
 
 int GTUOS::OperationFileClose(const CPU8080 &cpu) {
 	const int cycle = 50;
-	std::cout << "File close\n";
+	bool found = false;
+	int index;
+	
+	
+	for (int i=0; i<openFiles.size(); ++i) {
+		if (openFiles[i] == cpu.state->e) {
+			found = true;
+			index = i;
+		}
+	}
+	
+	
+	cpu.state->b = ZERO;
+	if (found) {
+		openFiles.erase(openFiles.begin() + index);
+		cpu.state->b = 1;
+	}
+	
 	
 	return cycle;
 }
@@ -532,7 +572,26 @@ int GTUOS::OperationFileClose(const CPU8080 &cpu) {
 
 int GTUOS::OperationFileSeek(const CPU8080 &cpu) {
 	const int cycle = 50;
-	std::cout << "File seek\n";
+	bool found = false;
+	uint16_t position;
+	
+	
+	position = cpu.state->b;
+	position = (position << BYTE_BIT_COUNT) | cpu.state->c;
+	for (int i=0; i<openFiles.size(); ++i) {
+		if (openFiles[i] == cpu.state->d) {
+			found = true;
+		}
+	}
+	
+	
+	cpu.state->b = ZERO;
+	if (found) {
+		if (fileSystem.SeekFile(cpu.state->d, position)) {
+			cpu.state->b = 1;
+		}
+	}
+	
 	
 	return cycle;
 }
@@ -541,7 +600,22 @@ int GTUOS::OperationFileSeek(const CPU8080 &cpu) {
 
 int GTUOS::OperationDirRead(const CPU8080 &cpu) {
 	const int cycle = 50;
-	std::cout << "Dir read\n";
+	const int STRING_LENGTH = 250;
+	uint16_t address;
+	char message[STRING_LENGTH];
+	int fileCount, allocCount, usageCount, blockCount;
+	
+	
+	address = cpu.state->b;
+	address = (address << BYTE_BIT_COUNT) | cpu.state->c;
+	fileSystem.ReadDir(&fileCount, &allocCount, &usageCount, &blockCount);
+	sprintf(message, "Files: %d\nByte Alloc: %d\nByte Used: %d\nBlocks: %d\n", fileCount, allocCount, usageCount, blockCount);
+	
+	for (int i=0; i<strlen(message); ++i) {
+		cpu.memory->at(address++) = message[i];
+	}
+	cpu.memory->at(address++) = '\0';
+	
 	
 	return cycle;
 }
@@ -775,4 +849,15 @@ void GTUOS::Hexdump(const CPU8080 &cpu) {
 	
 	/* Closing file */
 	outputFile.close();
+}
+
+
+void GTUOS::PrintFileTable() {
+	fileSystem.PrintFiles(openFiles);
+}
+
+
+
+void GTUOS::PrintDirectoryInfo() {
+	fileSystem.PrintDirectory();
 }

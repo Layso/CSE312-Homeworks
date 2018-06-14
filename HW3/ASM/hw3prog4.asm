@@ -1,6 +1,6 @@
 ; 8080 assembler code
-.hexfile prog.hex
-.binfile prog.com
+.hexfile hw3prog4.hex
+.binfile hw3prog4.com
 
 ; try "hex" for downloading in hex format
 .download bin  
@@ -53,17 +53,26 @@ GTU_OS:	PUSH D
 ; YOU SHOULD NOT CHANGE ANYTHING ABOVE THIS LINE
 
 
+WRITE_MSG: dw 'will be written to file', 00AH, 00AH
 ERROR_MESSAGE: dw 'An error occured, closing program', 00AH, 00AH
 ASK_FILE_NAME: dw 'Enter a file name',00AH,00H
-NEW_LINE: dw '',00AH,00H ; null terminated string
+NEW_LINE: dw ' ',00AH,00H ; null terminated string
 LIST: dw 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50
+APPEND_SIZE equ 10
 SIZE equ 50
 ZERO equ 0
-
+STRING: dw 'long long string to use as buffer for the get directory information', 00AH, 00AH
 
 ;Start of the program flow
 begin:
 	LXI SP, stack		; Initializing stack
+
+	; Printing directory information
+	LXI B, STRING		;
+	MVI A, DirRead		;
+	call GTU_OS		;
+	MVI A, PRINT_STR	;
+	call GTU_OS		;
 
 	; Asking a file name from user
 	LXI B, ASK_FILE_NAME	;
@@ -76,42 +85,76 @@ begin:
 	; Getting file name from user
 	MVI A, READ_STR		;
 	call GTU_OS		;
-	PUSH B			;
-	
-	; Creating file with given name
-	MVI A, FileCreate	;
-	call GTU_OS		;
-	MVI A, ZERO		;
-	CMP B			;
-	JZ errorEnd		;
-	
+
 	; Opening file
 	MVI A, FileOpen		;
-	POP B			;
 	call GTU_OS		;
 	MVI A, ZERO		;
 	CMP B			;
 	JZ errorEnd		;
 	
-	; Write numbers from 0 to 50 to the file
-	MOV E, B		;
+	; Set offset to read last byte
+	MOV D, B		;
+	LXI B, SIZE		;
+	DCX B			;
+	MVI A, FileSeek		;
+	call GTU_OS		;
+	
+	; Read last number from the file
+	MVI A, FileRead		;
+	MOV E, D		;
+	MVI D, 1		;
 	LXI B, LIST		;
-	MVI D, 2		;
-	MVI H, SIZE		;
-	
-	; Continue until 50
-loop:
-	PUSH B			;
-	MVI A, FileWrite	;
 	call GTU_OS		;
 	MVI A, ZERO		;
 	CMP B			;
 	JZ errorEnd		;
-	DCR H			;
-	POP B			;
-	INX B			;
-	INX B			;
+	
+	; Get number to register B
+	LXI B, LIST		;
+	MOV H, B		;
+	MOV L, C		;
+	MOV B, M		;
+	MVI C, APPEND_SIZE	;
+
+	; Add 10 more numbers
+loop:
+	; Prepare next number
+	INR B			;
+	PUSH B			;
+	MOV M, B		;
+
+	; Print the next number to write
+	MVI A, PRINT_B		;
+	call GTU_OS		;
+	MVI A, PRINT_STR	;
+	LXI B, WRITE_MSG	;
+	call GTU_OS		;
+
+	; Write number to file	
+	MVI A, FileWrite	;
+	MOV B, H		;
+	MOV C, L		;
+	MVI D, 1		;
+	call GTU_OS		;
+	MVI A, ZERO		;
+	CMP B			;
+	JZ errorEnd		;
+		
+	; Check to see if 10 numbers are finished
+	POP B			;	
+	DCR C			;
+	MVI A, ZERO		;
+	CMP C			;
 	JNZ loop		;
+
+
+	; Printing directory information again to see changes
+	LXI B, STRING		;
+	MVI A, DirRead		;
+	call GTU_OS		;
+	MVI A, PRINT_STR	;
+	call GTU_OS		;
 
 end:
 	HLT

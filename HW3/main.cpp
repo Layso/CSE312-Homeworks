@@ -21,13 +21,11 @@ int main (int argc, char**argv)
 	
 	int totalCycle = 0;
 	int DEBUG = atoi(argv[3]);
-	FileSystem disk;
 	
 	memory 	mem;
 	CPU8080 theCPU(&mem);
-	disk.ReadSystemFile(argv[2]);
 	theCPU.ReadFileIntoMemoryAt(argv[1], 0x0000);	
-	GTUOS	theOS(theCPU, DEBUG, disk);
+	GTUOS	theOS(theCPU, DEBUG, argv[2]);
 	
  	/* Seeding random with time */
 	srand(time(NULL));
@@ -45,8 +43,12 @@ int main (int argc, char**argv)
 		
 		
 		theOS.EndOfCycleCheck(theCPU, totalCycle);
+		if (DEBUG == 1) {
+			theOS.PrintFileTable();
+		}
 	}	while (!theCPU.isHalted());
 	
+	theOS.PrintDirectoryInfo();
 	theOS.Hexdump(theCPU);
 	
 	std::cout << "Total number of cycles: " << totalCycle << std::endl;

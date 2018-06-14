@@ -54,9 +54,11 @@ class GTUOS {
 		
 		
 		/* Constructor(s) */
-		GTUOS(const CPU8080 &cpu, int DEBUG, const FileSystem &newSystem);
+		GTUOS(const CPU8080 &cpu, int DEBUG, char *fileName);
 		
 		/* Public functions */
+		void PrintFileTable();
+		void PrintDirectoryInfo();
 		void EndOfCycleCheck(CPU8080 &cpu, int currentCycle);
 		uint64_t handleCall(const CPU8080 &cpu);
 		void Hexdump(const CPU8080 &cpu);

@@ -4,7 +4,7 @@ leysö: clean compilecpp linkcpp
 
 execName = sim8080
 
-args = prog.com fileSystem.dat 3
+args = hw3prog1.com fileSystem.dat 1
 
 extraFilesToClear = exe.mem
 

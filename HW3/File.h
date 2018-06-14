@@ -15,6 +15,7 @@ struct FileSerializer {
 	time_t modificationDate;
 	time_t accessDate;
 	int size;
+	int blocks;
 };
 
 
@@ -25,9 +26,18 @@ class File {
 		void GetName(char *outName);
 		int GetSize();
 		int GetOffset();
+		int GetBlocks();
+		void GiveBlock(int blockCount);
+		time_t GetCreation();
+		time_t GetModification();
+		time_t GetAccess();
 		
+		
+		bool SetOffset(int value);
+		std::vector<char> ReadData(int size);
 		void WriteData(std::vector<char> newData);
 		void SetData(std::vector<char> newData);
+		std::vector<char> GetData();
 		void Deserialize(struct FileSerializer serializer);
 		struct FileSerializer Serialize();
 
@@ -39,6 +49,7 @@ class File {
 		time_t modificationDate;
 		time_t accessDate;
 		int offset;
+		int blocks;
 };
 
 
